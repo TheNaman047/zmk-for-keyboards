@@ -7,4 +7,5 @@ on:
 
 jobs:
   build:
-    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+    # Pinned to ZMK v0.2 release to avoid breaking changes
+    uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.2
