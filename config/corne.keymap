@@ -102,8 +102,8 @@
             bindings = <
 &none  &kp ESC    &kp AT      &mt LG(LS(X)) HASH    &kp DLLR              &kp PERCENT     &kp CARET         &kp AMPS               &kp ASTRK              &kp EXCLAMATION  &kp BACKSPACE  &none
 &none  &kp TAB    &kp EQUAL   &kp LEFT_BRACKET      &kp LEFT_BRACE        &kp SQT         &kp BSLH          &kp RIGHT_BRACE        &kp RIGHT_BRACKET      &kp MINUS        &kp ENTER      &none
-&none  &kp GRAVE  &kp LA(N3)  &kp LG(LEFT_BRACKET)  &kp LEFT_PARENTHESIS  &kp LESS_THAN   &kp GREATER_THAN  &kp RIGHT_PARENTHESIS  &kp LG(RIGHT_BRACKET)  &kp GRAVE        &to 2          &none
-                              &none                 &to 0                 &kp LEFT_SHIFT  &kp RIGHT_ALT     &to 3                  &none
+&none  &kp GRAVE  &kp LA(N3)  &kp LG(LEFT_BRACKET)  &kp LEFT_PARENTHESIS  &kp LESS_THAN   &kp GREATER_THAN  &kp RIGHT_PARENTHESIS  &kp LG(RIGHT_BRACKET)  &kp PIPE         &to 2          &none
+                              &none                 &to 0                 &kp LEFT_SHIFT  &kp RCTRL         &to 3                  &none
             >;
 
             label = "1";
