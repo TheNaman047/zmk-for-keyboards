@@ -123,10 +123,10 @@
 
         L3 {
             bindings = <
-&none  &kp ESC  &mkp RCLK       &mmv MOVE_UP    &mkp LCLK        &none         &none          &none      &none      &none     &none     &none
-&none  &kp TAB  &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_DOWN   &none         &none          &kp RSHFT  &kp RCTRL  &kp RALT  &kp RGUI  &none
-&none  &to 4    &msc SCRL_LEFT  &none           &msc SCRL_RIGHT  &none         &none          &none      &none      &none     &none     &none
-                                &none           &to 0            &kp LEFT_WIN  &kp RIGHT_ALT  &to 1      &none
+&none  &kp ESC  &mkp RCLK       &mmv MOVE_UP    &mkp LCLK        &kp Q         &kp LG(LBKT)   &kp LS(LC(TAB))  &kp LC(TAB)  &kp LG(RBKT)  &kp BACKSPACE  &none
+&none  &kp TAB  &mmv MOVE_LEFT  &mmv MOVE_DOWN  &mmv MOVE_DOWN   &kp DEL       &kp LEFT       &kp DOWN         &kp UP       &kp RIGHT     &kp ENTER      &none
+&none  &to 4    &msc SCRL_LEFT  &none           &msc SCRL_RIGHT  &none         &none          &none            &none        &none         &none          &none
+                                &none           &to 0            &kp LEFT_WIN  &kp RIGHT_ALT  &to 1            &none
             >;
 
             label = "3";
