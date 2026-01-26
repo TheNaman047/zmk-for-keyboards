@@ -113,10 +113,10 @@
 
         L2 {
             bindings = <
-&none  &kp ESC  &kp LG(LEFT_BRACKET)  &kp LC(LS(TAB))  &kp LC(TAB)   &kp LG(RIGHT_BRACKET)  &kp NUMBER_7  &kp NUMBER_8  &kp NUMBER_9  &kp MINUS     &kp BACKSPACE  &none
-&none  &kp TAB  &none                 &kp PERCENT      &kp MINUS     &kp LS(EQUAL)          &kp NUMBER_4  &kp NUMBER_5  &kp NUMBER_6  &kp EQUAL     &kp ENTER      &none
-&none  &none    &to 3                 &none            &kp ASTERISK  &kp SLASH              &kp NUMBER_1  &kp NUMBER_2  &kp NUMBER_3  &kp NUMBER_0  &none          &none
-                                      &none            &to 0         &kp LEFT_GUI           &kp LEFT_ALT  &to 1         &to 4
+&none  &kp ESC  &kp LG(LEFT_BRACKET)  &kp LC(LS(TAB))  &kp LC(TAB)   &kp LG(RIGHT_BRACKET)  &kp NUMBER_7               &kp NUMBER_8  &kp NUMBER_9  &kp MINUS     &kp BACKSPACE  &none
+&none  &kp TAB  &none                 &kp PERCENT      &kp MINUS     &kp LS(EQUAL)          &kp NUMBER_4               &kp NUMBER_5  &kp NUMBER_6  &kp EQUAL     &kp ENTER      &none
+&none  &none    &to 3                 &none            &kp ASTERISK  &kp SLASH              &kp NUMBER_1               &kp NUMBER_2  &kp NUMBER_3  &kp NUMBER_0  &none          &none
+                                      &none            &to 0         &kp LEFT_GUI           &hm LC(LEFT_ALT) LEFT_ALT  &to 1         &to 4
             >;
 
             label = "2";
