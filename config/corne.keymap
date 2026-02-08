@@ -9,6 +9,8 @@
 #include <dt-bindings/zmk/ext_power.h>
 #include <dt-bindings/zmk/keys.h>
 
+&mt { quick-tap-ms = <150>; };
+
 / {
     behaviors {
         hm: homerow_mods {
@@ -16,12 +18,11 @@
             label = "HOMEROW_MODS";
             #binding-cells = <2>;
             tapping-term-ms = <200>;
-            quick_tap_ms = <0>;
+            quick_tap_ms = <150>;
             flavor = "balanced";
             bindings = <&kp>, <&kp>;
 
-            quick-tap-ms = <180>;
-            global-quick-tap;
+            quick-tap-ms = <150>;
         };
 
         ltq: ltq {
@@ -91,10 +92,10 @@
 
         L0 {
             bindings = <
-&none  &kp Q  &kp W  &kp E           &kp R                        &kp T           &kp Y      &kp U            &kp I            &kp O    &kp P     &none
-&none  &kp A  &kp S  &hm LEFT_ALT D  &hm LEFT_GUI F               &kp G           &kp H      &hm RIGHT_GUI J  &hm RIGHT_ALT K  &kp L    &kp SEMI  &none
-&none  &kp Z  &kp X  &kp C           &kp V                        &kp B           &kp N      &kp M            &kp COMMA        &kp DOT  &kp FSLH  &none
-                     &to 3           &mt LC(LA(LS(SPACE))) SPACE  &kp LEFT_SHIFT  &kp RCTRL  &to 1            &to 4
+&none  &kp Q  &kp W  &kp E           &kp R               &kp T           &kp Y      &kp U            &kp I            &kp O    &kp P     &none
+&none  &kp A  &kp S  &hm LEFT_ALT D  &hm LEFT_GUI F      &kp G           &mt H H    &hm RIGHT_GUI J  &hm RIGHT_ALT K  &kp L    &kp SEMI  &none
+&none  &kp Z  &kp X  &kp C           &kp V               &kp B           &kp N      &kp M            &kp COMMA        &kp DOT  &kp FSLH  &none
+                     &to 3           &mt LEFT_ALT SPACE  &kp LEFT_SHIFT  &kp RCTRL  &to 1            &to 4
             >;
 
             label = "0";
@@ -103,8 +104,8 @@
         L1 {
             bindings = <
 &none  &kp ESC  &kp EXCLAMATION  &mt LG(LS(X)) AT_SIGN      &kp HASH                 &kp DOLLAR      &kp PERCENT        &kp CARET                  &kp AMPERSAND                &kp ASTERISK  &kp BACKSPACE  &none
-&none  &kp TAB  &kp EQUAL        &hm LEFT_ALT LEFT_BRACKET  &hm LEFT_WIN LEFT_BRACE  &kp SQT         &kp DOUBLE_QUOTES  &hm RIGHT_WIN RIGHT_BRACE  &hm RIGHT_ALT RIGHT_BRACKET  &kp MINUS     &kp ENTER      &none
-&none  &none    &to 3            &kp BACKSLASH              &kp LEFT_PARENTHESIS     &kp LESS_THAN   &kp GREATER_THAN   &kp RIGHT_PARENTHESIS      &kp PIPE                     &kp SLASH     &none          &none
+&none  &kp TAB  &kp PLUS         &hm LEFT_ALT LEFT_BRACKET  &hm LEFT_WIN LEFT_BRACE  &kp SQT         &kp DOUBLE_QUOTES  &hm RIGHT_WIN RIGHT_BRACE  &hm RIGHT_ALT RIGHT_BRACKET  &kp MINUS     &kp ENTER      &none
+&none  &none    &to 3            &kp BACKSLASH              &kp LEFT_PARENTHESIS     &kp LESS_THAN   &kp GREATER_THAN   &kp RIGHT_PARENTHESIS      &kp SLASH                    &kp PIPE      &none          &none
                                  &none                      &to 0                    &kp LEFT_SHIFT  &kp LEFT_CONTROL   &to 2                      &to 4
             >;
 
@@ -114,7 +115,7 @@
         L2 {
             bindings = <
 &none  &kp ESC  &kp LG(LEFT_BRACKET)  &kp LC(LS(TAB))       &kp LC(TAB)         &kp LG(RIGHT_BRACKET)  &kp NUMBER_7  &kp NUMBER_8            &kp NUMBER_9            &kp MINUS     &kp BACKSPACE  &none
-&none  &kp TAB  &none                 &hm LEFT_ALT PERCENT  &hm LEFT_GUI MINUS  &kp LS(EQUAL)          &kp NUMBER_4  &hm RIGHT_GUI NUMBER_5  &hm RIGHT_ALT NUMBER_6  &kp EQUAL     &kp ENTER      &none
+&none  &kp TAB  &none                 &hm LEFT_ALT PERCENT  &hm LEFT_GUI MINUS  &kp PLUS               &kp NUMBER_4  &hm RIGHT_GUI NUMBER_5  &hm RIGHT_ALT NUMBER_6  &kp EQUAL     &kp ENTER      &none
 &none  &none    &to 3                 &none                 &kp ASTERISK        &kp SLASH              &kp NUMBER_1  &kp NUMBER_2            &kp NUMBER_3            &kp NUMBER_0  &none          &none
                                       &none                 &to 0               &kp LEFT_SHIFT         &kp RCTRL     &to 1                   &to 4
             >;
