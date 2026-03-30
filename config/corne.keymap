@@ -115,8 +115,8 @@
         L2 {
             bindings = <
 &none  &kp ESC  &kp LG(LEFT_BRACKET)  &kp LC(LS(TAB))       &kp LC(TAB)         &kp LG(RIGHT_BRACKET)  &kp NUMBER_7  &kp NUMBER_8            &kp NUMBER_9            &kp MINUS     &kp BACKSPACE  &none
-&none  &kp TAB  &none                 &hm LEFT_ALT PERCENT  &hm LEFT_GUI MINUS  &kp PLUS               &kp NUMBER_4  &hm RIGHT_GUI NUMBER_5  &hm RIGHT_ALT NUMBER_6  &kp EQUAL     &kp ENTER      &none
-&none  &none    &none                 &none                 &kp ASTERISK        &kp SLASH              &kp NUMBER_1  &kp NUMBER_2            &kp NUMBER_3            &kp NUMBER_0  &none          &none
+&none  &kp TAB  &none                 &hm LEFT_ALT PERCENT  &hm LEFT_GUI MINUS  &kp KP_PLUS            &kp NUMBER_4  &hm RIGHT_GUI NUMBER_5  &hm RIGHT_ALT NUMBER_6  &kp EQUAL     &kp ENTER      &none
+&none  &none    &none                 &none                 &kp KP_MULTIPLY     &kp SLASH              &kp NUMBER_1  &kp NUMBER_2            &kp NUMBER_3            &kp NUMBER_0  &none          &none
                                       &to 3                 &to 0               &kp LEFT_SHIFT         &kp RCTRL     &to 1                   &to 4
             >;
 
