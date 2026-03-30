@@ -105,7 +105,7 @@
             bindings = <
 &none  &kp ESC  &kp EXCLAMATION  &mt LG(LS(X)) AT_SIGN      &kp HASH                 &kp DOLLAR      &kp PERCENT        &kp CARET                  &kp AMPERSAND                &kp ASTERISK  &kp BACKSPACE  &none
 &none  &kp TAB  &kp EQUAL        &hm LEFT_ALT LEFT_BRACKET  &hm LEFT_WIN LEFT_BRACE  &kp SQT         &kp DOUBLE_QUOTES  &hm RIGHT_WIN RIGHT_BRACE  &hm RIGHT_ALT RIGHT_BRACKET  &kp MINUS     &kp ENTER      &none
-&none  &none    &none            &kp BACKSLASH              &kp LEFT_PARENTHESIS     &kp LESS_THAN   &kp GREATER_THAN   &kp RIGHT_PARENTHESIS      &kp SLASH                    &kp PIPE      &none          &none
+&none  &none    &to 3            &kp BACKSLASH              &kp LEFT_PARENTHESIS     &kp LESS_THAN   &kp GREATER_THAN   &kp RIGHT_PARENTHESIS      &kp SLASH                    &kp PIPE      &none          &none
                                  &none                      &to 0                    &kp LEFT_SHIFT  &kp LEFT_CONTROL   &to 2                      &to 4
             >;
 
@@ -114,10 +114,10 @@
 
         L2 {
             bindings = <
-&none  &kp ESC  &kp LG(LEFT_BRACKET)  &kp LC(LS(TAB))       &kp LC(TAB)         &kp LG(RIGHT_BRACKET)  &kp NUMBER_7  &kp NUMBER_8            &kp NUMBER_9            &kp MINUS     &kp BACKSPACE  &none
-&none  &kp TAB  &none                 &hm LEFT_ALT PERCENT  &hm LEFT_GUI MINUS  &kp KP_PLUS            &kp NUMBER_4  &hm RIGHT_GUI NUMBER_5  &hm RIGHT_ALT NUMBER_6  &kp EQUAL     &kp ENTER      &none
-&none  &none    &none                 &none                 &kp KP_MULTIPLY     &kp SLASH              &kp NUMBER_1  &kp NUMBER_2            &kp NUMBER_3            &kp NUMBER_0  &none          &none
-                                      &none                 &to 0               &kp LEFT_SHIFT         &kp RCTRL     &to 1                   &to 4
+&none  &kp ESC  &kp LG(LEFT_BRACKET)  &kp LC(LS(TAB))       &kp LC(TAB)             &kp LG(RIGHT_BRACKET)  &kp NUMBER_7  &kp NUMBER_8            &kp NUMBER_9            &kp MINUS     &kp BACKSPACE  &none
+&none  &kp TAB  &none                 &hm LEFT_ALT PERCENT  &hm LEFT_GUI KP_DIVIDE  &kp KP_MULTIPLY        &kp NUMBER_4  &hm RIGHT_GUI NUMBER_5  &hm RIGHT_ALT NUMBER_6  &kp KP_PLUS   &kp ENTER      &none
+&none  &none    &to 3                 &none                 &kp PERCENT             &kp KP_EQUAL           &kp NUMBER_1  &kp NUMBER_2            &kp NUMBER_3            &kp NUMBER_0  &none          &none
+                                      &none                 &to 0                   &kp LEFT_SHIFT         &kp RCTRL     &to 1                   &to 4
             >;
 
             label = "2";
