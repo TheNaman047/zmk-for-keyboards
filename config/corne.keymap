@@ -103,10 +103,10 @@
 
         L1 {
             bindings = <
-&none  &kp ESC  &kp EXCLAMATION  &mt LG(LS(X)) AT_SIGN      &kp HASH                 &kp DOLLAR      &kp PERCENT        &kp CARET                  &kp AMPERSAND                &kp ASTERISK  &kp BACKSPACE  &none
-&none  &kp TAB  &kp EQUAL        &hm LEFT_ALT LEFT_BRACKET  &hm LEFT_WIN LEFT_BRACE  &kp SQT         &kp DOUBLE_QUOTES  &hm RIGHT_WIN RIGHT_BRACE  &hm RIGHT_ALT RIGHT_BRACKET  &kp MINUS     &kp ENTER      &none
-&none  &none    &to 3            &kp BACKSLASH              &kp LEFT_PARENTHESIS     &kp LESS_THAN   &kp GREATER_THAN   &kp RIGHT_PARENTHESIS      &kp SLASH                    &kp PIPE      &none          &none
-                                 &none                      &to 0                    &kp LEFT_SHIFT  &kp LEFT_CONTROL   &to 2                      &to 4
+&none  &kp ESC    &kp EXCLAMATION  &mt LG(LS(X)) AT_SIGN      &kp HASH                 &kp DOLLAR      &kp PERCENT        &kp CARET                  &kp AMPERSAND                &kp ASTERISK  &kp BACKSPACE  &none
+&none  &kp TAB    &kp EQUAL        &hm LEFT_ALT LEFT_BRACKET  &hm LEFT_WIN LEFT_BRACE  &kp SQT         &kp DOUBLE_QUOTES  &hm RIGHT_WIN RIGHT_BRACE  &hm RIGHT_ALT RIGHT_BRACKET  &kp MINUS     &kp ENTER      &none
+&none  &kp TILDE  &to 3            &kp BACKSLASH              &kp LEFT_PARENTHESIS     &kp LESS_THAN   &kp GREATER_THAN   &kp RIGHT_PARENTHESIS      &kp SLASH                    &kp PIPE      &none          &none
+                                   &none                      &to 0                    &kp LEFT_SHIFT  &kp LEFT_CONTROL   &to 2                      &to 4
             >;
 
             label = "1";
