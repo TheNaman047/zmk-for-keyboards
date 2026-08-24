@@ -77,3 +77,31 @@ These are the traps that cost real debugging time:
 Key positions in combos and `&key_physical_attrs` entries are indexed against the 42-key layout in
 `corne-layouts.dtsi` / `config/corne.json`, numbered left-to-right, top-to-bottom, thumbs last (36–41).
 Renumbering the layout invalidates every combo.
+
+## Git and pull requests
+
+**This repo is a GitHub fork.** `origin` is `TheNaman047/zmk-for-keyboards`; its parent is
+`dieselsaurav/zmk-for-keyboards` and the root source is `astnmsn/zmk-for-keyboards`. The default branch
+is `zmk-for-corne` — there is no `main`/`master`.
+
+That has one sharp consequence: **a PR opened from this fork defaults its base to the parent repo, not to
+this one.** The `https://github.com/TheNaman047/zmk-for-keyboards/pull/new/<branch>` URL that `git push`
+prints in its hint leads to a compare page pre-targeted at `dieselsaurav/...`, so accepting the default
+proposes personal keymap changes into someone else's repository. Always scope PRs explicitly:
+
+```sh
+gh pr create -R TheNaman047/zmk-for-keyboards --base zmk-for-corne --head <branch>
+```
+
+Then confirm both ends landed in the fork before treating it as done:
+
+```sh
+gh api repos/TheNaman047/zmk-for-keyboards/pulls/<n> \
+  --jq '{base_repo: .base.repo.full_name, head_repo: .head.repo.full_name}'
+```
+
+Both fields must read `TheNaman047/zmk-for-keyboards`.
+
+Also verify pushes against the remote rather than trusting the push output — a `git push` here has printed
+GitHub's "Create a pull request" hint without the ref actually landing. `git ls-remote --heads origin` is
+the check that settles it.
