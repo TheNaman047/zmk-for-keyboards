@@ -10,8 +10,34 @@ display modules are pulled in by west at build time.
 
 ## Building
 
-There is **no local toolchain** (`west` is not installed and no ZMK workspace exists on this machine).
-Builds happen in GitHub Actions only:
+**Build locally first** — `scripts/zmk-build.sh` runs the exact same steps as CI inside the exact same
+container (`zmkfirmware/zmk-build-arm:stable`), so a local pass means a CI pass. Requires only Docker,
+`yq` and `jq` on the host; there is deliberately no host toolchain.
+
+```sh
+./scripts/zmk-build.sh setup            # one time: pull image + west init/update/export (~6 min)
+./scripts/zmk-build.sh list             # the 5 targets, read straight out of build.yaml
+./scripts/zmk-build.sh build left       # substring filter on the target id
+./scripts/zmk-build.sh build            # all 5
+./scripts/zmk-build.sh flash corne_left_nice_oled-nice_nano_v2
+```
+
+`.uf2` files land in **`firmware/`** at the repo root (gitignored). Measured on this machine: one
+pristine target **17 s**, all five **57 s**, a `config/corne.keymap` edit **15 s** — versus a push plus
+~9 min of CI round-trip. Verified equivalent to CI: the generated `zephyr/.config` (893 symbols) and
+`zephyr.dts` for `corne_left nice_oled` are byte-identical to run 32662317168's job log.
+
+- The west workspace lives **outside the repo** at `~/.cache/zmk-workspace` (override with
+  `ZMK_WORKSPACE`), with `config/` bind-mounted into it read-only. This is on purpose: the CI workflow
+  does `west init -l config` *in the checkout*, which would scatter `.west/ zmk/ zephyr/ modules/
+  tools/ bootloader/` through the repo root. `git status` staying clean after a build is the check
+  that the isolation holds.
+- Pass `--pristine` after editing `*.conf`, `config/boards/shields/**`, `config/west.yml`, or the
+  shield/snippet list. Keymap-only edits rebuild correctly without it.
+- Run `./scripts/zmk-build.sh update` after editing `config/west.yml`; the script warns when the file
+  has drifted from the last `west update`.
+
+CI remains the artifact-of-record path:
 
 - Push a commit touching `config/**` — that path filter is the trigger (`.github/workflows/build.yml`).
   Changes to `build.yaml` alone do **not** trigger a build; use `workflow_dispatch` (Actions → "Build ZMK
@@ -21,7 +47,7 @@ Builds happen in GitHub Actions only:
 - To validate a change without pushing to the tracked branch, push a scratch branch — the workflow runs
   on any branch.
 
-There is no test suite, linter, or formatter. "Does it compile" is the only check, and it lives in CI.
+There is no test suite, linter, or formatter. "Does it compile" is the only check — now runnable locally.
 
 ## Architecture
 
