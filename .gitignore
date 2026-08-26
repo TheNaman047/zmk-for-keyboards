@@ -1,0 +1,12 @@
+# Local build output (scripts/zmk-build.sh writes .uf2 files here)
+/firmware/
+
+# west workspace, in case anyone runs `west init -l config` in the repo root the way
+# the CI workflow does. Local builds keep the workspace in ~/.cache/zmk-workspace.
+/.west/
+/build/
+/zmk/
+/zephyr/
+/modules/
+/tools/
+/bootloader/
