@@ -31,9 +31,17 @@ die()  { printf '\033[1;31m==> %s\033[0m\n' "$*" >&2; exit 1; }
 # (mikefarah, uses -o=json). Probe instead of assuming.
 matrix_json() {
   command -v yq >/dev/null || die "yq not found (install python-yq or go-yq)"
-  yq -c '.include[]' "$REPO/build.yaml" 2>/dev/null \
-    || yq -o=json -I=0 '.include[]' "$REPO/build.yaml" 2>/dev/null \
-    || die "could not parse build.yaml with this yq ($(yq --version 2>&1 | head -1))"
+  # Probe on whether the output actually parses as JSON, not on exit status: Go-yq
+  # accepts -c, exits 0 and prints YAML, so an exit-status probe never falls through.
+  local out
+  for flags in "-o=json -I=0" "-c"; do
+    if out=$(yq $flags '.include[]' "$REPO/build.yaml" 2>/dev/null) \
+       && [ -n "$out" ] && jq -e . >/dev/null 2>&1 <<<"$out"; then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  done
+  die "could not parse build.yaml with this yq ($(yq --version 2>&1 | head -1))"
 }
 
 # target id: shield with spaces collapsed to _, plus board. Mirrors CI's artifact name
@@ -103,6 +111,8 @@ cmd_list() {
   local entry board shield snippet
   local -a targets=()
   mapfile -t targets < <(matrix_json)
+  # die() inside matrix_json runs in a subshell and cannot fail us; check here.
+  [ ${#targets[@]} -gt 0 ] || die "could not read the build matrix from build.yaml"
   for entry in "${targets[@]}"; do
     board=$(jq -r '.board' <<<"$entry")
     shield=$(jq -r '.shield // ""' <<<"$entry")
@@ -129,6 +139,8 @@ cmd_build() {
   local entry board shield snippet id src ext skipped=0
   local -a built=() snip_args=() shield_arg=() targets=()
   mapfile -t targets < <(matrix_json)
+  # die() inside matrix_json runs in a subshell and cannot fail us; check here.
+  [ ${#targets[@]} -gt 0 ] || die "could not read the build matrix from build.yaml"
 
   for entry in "${targets[@]}"; do
     board=$(jq -r '.board' <<<"$entry")
@@ -175,6 +187,17 @@ cmd_clean() {
   esac
 }
 
+# Where the nice!nano bootloader shows up as a mass-storage volume. macOS mounts by
+# volume label under /Volumes with no $USER component; Linux uses /run/media/$USER or
+# /media/$USER. The trailing * catches macOS appending " 1" when a stale mount lingers.
+# Overridable so the wait loop can be exercised without a keyboard attached.
+NICENANO_PATHS="${ZMK_NICENANO_PATHS:-/Volumes/NICENANO* /run/media/$USER/NICENANO* /media/$USER/NICENANO*}"
+
+nicenano_mount() {
+  # shellcheck disable=SC2086  # deliberate split+glob over the path list
+  ls -d $NICENANO_PATHS 2>/dev/null | head -1 || true
+}
+
 cmd_flash() {
   local id="${1:-}" uf2 mnt=""
   [ -n "$id" ] || die "usage: $0 flash <target>   (see: $0 list)"
@@ -183,14 +206,26 @@ cmd_flash() {
 
   log "double-tap reset on the nice!nano - waiting for the NICENANO drive"
   for _ in $(seq 1 60); do
-    mnt=$(ls -d /run/media/"$USER"/NICENANO /media/"$USER"/NICENANO 2>/dev/null | head -1 || true)
+    mnt=$(nicenano_mount)
     [ -n "$mnt" ] && break
     sleep 1
   done
-  [ -n "$mnt" ] || die "NICENANO drive never appeared"
+  [ -n "$mnt" ] || die "NICENANO drive never appeared (looked in: $NICENANO_PATHS)"
+
+  # -X keeps macOS from writing ._ AppleDouble sidecars onto the bootloader's FAT
+  # volume; GNU cp has no such flag and needs none.
+  local -a cpflags=()
+  [ "$(uname -s)" = Darwin ] && cpflags=(-X)
+
   log "copying $(basename "$uf2") -> $mnt"
-  cp "$uf2" "$mnt/" && sync
-  log "flashed"
+  if ! cp "${cpflags[@]}" "$uf2" "$mnt/" 2>/dev/null; then
+    # The board reboots the instant the last block lands, so the volume can vanish
+    # mid-copy and cp reports an I/O error on a flash that actually succeeded. A
+    # drive that is still mounted means the copy really did fail.
+    [ -d "$mnt" ] && die "copy to $mnt failed"
+  fi
+  sync
+  log "flashed - the board reboots on its own and the drive disappears"
 }
 
 usage() {
