@@ -31,9 +31,17 @@ die()  { printf '\033[1;31m==> %s\033[0m\n' "$*" >&2; exit 1; }
 # (mikefarah, uses -o=json). Probe instead of assuming.
 matrix_json() {
   command -v yq >/dev/null || die "yq not found (install python-yq or go-yq)"
-  yq -c '.include[]' "$REPO/build.yaml" 2>/dev/null \
-    || yq -o=json -I=0 '.include[]' "$REPO/build.yaml" 2>/dev/null \
-    || die "could not parse build.yaml with this yq ($(yq --version 2>&1 | head -1))"
+  # Probe on whether the output actually parses as JSON, not on exit status: Go-yq
+  # accepts -c, exits 0 and prints YAML, so an exit-status probe never falls through.
+  local out
+  for flags in "-o=json -I=0" "-c"; do
+    if out=$(yq $flags '.include[]' "$REPO/build.yaml" 2>/dev/null) \
+       && [ -n "$out" ] && jq -e . >/dev/null 2>&1 <<<"$out"; then
+      printf '%s\n' "$out"
+      return 0
+    fi
+  done
+  die "could not parse build.yaml with this yq ($(yq --version 2>&1 | head -1))"
 }
 
 # target id: shield with spaces collapsed to _, plus board. Mirrors CI's artifact name
@@ -103,6 +111,8 @@ cmd_list() {
   local entry board shield snippet
   local -a targets=()
   mapfile -t targets < <(matrix_json)
+  # die() inside matrix_json runs in a subshell and cannot fail us; check here.
+  [ ${#targets[@]} -gt 0 ] || die "could not read the build matrix from build.yaml"
   for entry in "${targets[@]}"; do
     board=$(jq -r '.board' <<<"$entry")
     shield=$(jq -r '.shield // ""' <<<"$entry")
@@ -129,6 +139,8 @@ cmd_build() {
   local entry board shield snippet id src ext skipped=0
   local -a built=() snip_args=() shield_arg=() targets=()
   mapfile -t targets < <(matrix_json)
+  # die() inside matrix_json runs in a subshell and cannot fail us; check here.
+  [ ${#targets[@]} -gt 0 ] || die "could not read the build matrix from build.yaml"
 
   for entry in "${targets[@]}"; do
     board=$(jq -r '.board' <<<"$entry")
