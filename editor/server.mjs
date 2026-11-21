@@ -11,9 +11,13 @@ import { spawn, execFile } from 'node:child_process'
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { softFlash } from './softflash.mjs'
+import { listPorts } from './studio-rpc.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
+const WORKSPACE = process.env.ZMK_WORKSPACE || path.join(os.homedir(), '.cache', 'zmk-workspace')
 const REPO = path.resolve(here, '..')
 const APP = path.join(here, 'app')
 const BUILD_SH = path.join(REPO, 'scripts', 'zmk-build.sh')
@@ -54,19 +58,27 @@ function emit (event, data) {
 }
 
 // Cached briefly: the panel polls /status, and `list` shells out to yq + jq per target.
+// Resolves to [{ id, snippet }].
 let targetsCache = { at: 0, promise: null }
-function listTargets () {
+function listTargetsDetailed () {
   if (targetsCache.promise && Date.now() - targetsCache.at < 10000) return targetsCache.promise
   const promise = new Promise((resolve, reject) => {
     execFile(BUILD_SH, ['list'], { cwd: REPO }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr.trim() || err.message))
-      resolve(stdout.split('\n').map(l => l.trim().split(/\s+/)[0]).filter(Boolean))
+      resolve(stdout.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+        const [id, ...rest] = l.split(/\s+/)
+        const m = rest.join(' ').match(/snippet:\s*(\S+)/)
+        return { id, snippet: m ? m[1] : '' }
+      }))
     })
   })
   promise.catch(() => { targetsCache = { at: 0, promise: null } })
   targetsCache = { at: Date.now(), promise }
   return promise
 }
+const listTargets = async () => (await listTargetsDetailed()).map(t => t.id)
+// Soft flash needs the half whose firmware speaks Studio RPC over USB.
+const studioTarget = async () => (await listTargetsDetailed()).find(t => /studio/.test(t.snippet))?.id || null
 
 const sh = (cmd, argv, timeout) => new Promise(resolve =>
   execFile(cmd, argv, { timeout }, err => resolve(!err)))
@@ -94,17 +106,17 @@ async function ensureDocker (log) {
   return false
 }
 
-function startBuild (target, pristine) {
+// One job at a time: a build, or a build followed by a soft flash. Both share the log.
+// kind: 'build' | 'softflash'
+function startJob ({ kind, target, pristine = false, force = false }) {
   const id = ++buildSeq
-  build = { id, target, pristine, startedAt: Date.now(), finishedAt: null, exitCode: null, lines: [] }
+  build = { id, kind, target, pristine, startedAt: Date.now(), finishedAt: null, exitCode: null, lines: [] }
   emit('start', summary())
   const finish = code => {
     build.exitCode = code
     build.finishedAt = Date.now()
     emit('done', summary())
   }
-  const log = line => push(Buffer.from(line + '\n'))
-
   const push = chunk => {
     // Strip ANSI colours/cursor codes; docker without -t still emits some from west.
     const text = chunk.toString().replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
@@ -115,9 +127,9 @@ function startBuild (target, pristine) {
       emit('log', { id, line })
     }
   }
+  const log = line => push(Buffer.from(line + '\n'))
 
-  ensureDocker(log).then(ok => {
-    if (!ok) return finish(1)
+  const runBuild = () => new Promise(resolve => {
     const argv = ['build', target, ...(pristine ? ['--pristine'] : [])]
     log(`$ scripts/zmk-build.sh ${argv.join(' ')}`)
     const child = spawn(BUILD_SH, argv, {
@@ -128,8 +140,27 @@ function startBuild (target, pristine) {
     child.stdout.on('data', push)
     child.stderr.on('data', push)
     child.on('error', err => log(`failed to start build: ${err.message}`))
-    child.on('close', code => finish(code ?? 1))
-  }, err => { log(`build failed: ${err.message}`); finish(1) })
+    child.on('close', code => resolve(code ?? 1))
+  })
+
+  ;(async () => {
+    if (!(await ensureDocker(log))) return finish(1)
+    const code = await runBuild()
+    if (code !== 0 || kind !== 'softflash') return finish(code)
+    log('==> soft flash: pushing key bindings to the keyboard over ZMK Studio RPC')
+    try {
+      await softFlash({
+        buildDir: path.join(WORKSPACE, 'build', target),
+        baselineDir: path.join(FIRMWARE, '.flashed', target),
+        force,
+        log: line => log(line)
+      })
+      finish(0)
+    } catch (e) {
+      log(`soft flash failed: ${e.message}`)
+      finish(1)
+    }
+  })().catch(err => { log(`job failed: ${err.message}`); finish(1) })
 }
 
 function summary () {
@@ -224,14 +255,22 @@ async function handle (req, res) {
 
   if (pathname === '/__local/status' && req.method === 'GET') {
     let targets = []
+    let studio = null
     let targetsError = null
-    try { targets = await listTargets() } catch (e) { targetsError = e.message }
+    try { targets = await listTargets(); studio = await studioTarget() } catch (e) { targetsError = e.message }
     const keymapStat = fs.existsSync(KEYMAP) ? fs.statSync(KEYMAP) : null
+    const baseline = studio && path.join(FIRMWARE, '.flashed', studio, 'zephyr.dts')
     return send(res, 200, {
       repo: REPO,
       keymap: { path: KEYMAP, mtime: keymapStat ? keymapStat.mtimeMs : null },
       targets,
       targetsError,
+      softflash: {
+        target: studio,
+        // when the left half was last really flashed via zmk-build.sh flash (drift baseline)
+        flashedAt: baseline && fs.existsSync(baseline) ? fs.statSync(baseline).mtimeMs : null,
+        ports: listPorts()
+      },
       build: summary(),
       firmware: firmwareFiles(),
       firmwareDir: FIRMWARE
@@ -296,7 +335,19 @@ async function handle (req, res) {
     if (target !== 'all' && !targets.includes(target)) {
       return send(res, 400, { error: `unknown target '${target}'`, targets })
     }
-    startBuild(target, Boolean(body.pristine))
+    startJob({ kind: 'build', target, pristine: Boolean(body.pristine) })
+    return send(res, 202, summary())
+  }
+
+  if (pathname === '/__local/softflash' && req.method === 'POST') {
+    if (!sameOrigin(req)) return send(res, 403, { error: 'cross-origin request refused' })
+    if (build && build.finishedAt === null) return send(res, 409, { error: 'a build is already running' })
+    let body
+    try { body = await readJson(req) } catch { return send(res, 400, { error: 'invalid JSON' }) }
+    let target
+    try { target = await studioTarget() } catch (e) { return send(res, 500, { error: e.message }) }
+    if (!target) return send(res, 400, { error: 'no build target has the studio-rpc-usb-uart snippet' })
+    startJob({ kind: 'softflash', target, force: Boolean(body.force) })
     return send(res, 202, summary())
   }
 

@@ -22,8 +22,54 @@ API.
 - **Target**: defaults to the left half. Keymap-only edits need only the left half reflashed,
   because the left half is the BLE central and runs the keymap.
 - **pristine**: does a clean rebuild. Tick it after editing `*.conf`, shield files or `west.yml`.
-- **build on save**: starts a build every time the editor saves.
-- The log streams live and survives a page reload. A failed build opens the panel.
+- **on save**: choose do nothing, build, or soft flash every time the editor saves.
+- The log streams live and survives a page reload. A failed job opens the panel.
+
+## Soft flash (no reflash)
+
+**Soft flash** builds the left half, then sends the key bindings to the keyboard over USB using
+ZMK Studio's protocol. The keyboard saves them to its settings, so they survive a power cycle.
+There's no bootloader and no drag-and-drop. Only keys that differ are sent.
+
+1. Plug the **left** half in over USB. It's the half with Studio enabled.
+2. **Quit the ZMK Studio app.** It holds the serial port open, and soft flash will name the
+   process blocking it.
+3. Save in the editor, then click **Soft flash**, or set **on save** to soft flash.
+
+What it can and can't change:
+
+| Change | Soft flash | Real flash |
+|---|---|---|
+| Any key's binding on an existing layer, using a behavior already in the firmware (`&kp`, `&hm`, `&to`, `&mt`, `&bt`, ...) | ✅ | ✅ |
+| Combos, macros, hold-tap timing/flavor, a newly defined behavior | ❌ | ✅ |
+| Adding, removing or reordering layers | ❌ | ✅ |
+| `.conf` / Kconfig options, shield files | ❌ | ✅ |
+
+**Guards** (`editor/softflash.mjs`):
+- **Firmware drift.** Every build saves its `zephyr.dts` and `.config` into `firmware/.meta/<target>/`,
+  and `zmk-build.sh flash` copies them to `firmware/.flashed/<target>/`. Soft flash compares
+  everything except the key bindings against that record. If combos, behaviors, macros, layers or
+  `.config` changed, it refuses and names what changed. **Apply bindings anyway** pushes the key
+  bindings regardless. Until you've flashed once with `zmk-build.sh flash`, nothing is recorded and
+  this check is skipped; the panel says so.
+- **The keyboard's own checks.** A behavior missing from the firmware, a locked keyboard, layers
+  reordered in Studio, or a different layer count stops it before anything is written.
+- **Rollback.** If the keyboard rejects any binding, the unsaved changes are discarded on the
+  keyboard and nothing is saved.
+
+Soft-flashed bindings live in the same settings storage as Studio edits, so the same "saved
+bindings beat flashed firmware" rule applies. Soft flash rewrites every key that differs from the
+build, which also clears earlier Studio edits. After a real flash that changes key bindings, run
+soft flash once (or Restore Stock Settings), or the old saved bindings stay in effect.
+
+How the bindings are read: from the built `zephyr.dts`, where every binding is already numeric
+(`&kp 0x7002b`). Nothing re-implements the C preprocessor. Behaviors are matched to the keyboard
+by name: `display-name`, else the node's `label`, else the node name, which is how ZMK names them
+(`&hm` shows up as `HOMEROW_MODS`). The serial client (`editor/studio-rpc.mjs`) is dependency-free
+Node: protobuf plus `0xAB`/`0xAC`/`0xAD` framing over `/dev/cu.usbmodem*` in raw mode. Its requests
+are byte-identical to ZMK's official `zmk-studio-ts-client`.
+
+Tests: `node --test editor/test/`.
 
 ## ZMK Studio edits override flashed keymaps
 
@@ -45,6 +91,8 @@ pairings.
 | `server.mjs` | Zero-dependency Node server on `127.0.0.1`: static files, keymap read/write, `POST /__local/build`, and a server-sent-events log stream. |
 | `fs-shim.js` | Stands in for `window.showOpenFilePicker` with handles that read and write only this checkout's `config/*.keymap` through the server. The editor therefore always edits the file the Build button compiles. |
 | `toolbar.js` | The Build panel, injected into the page in a shadow root. |
+| `softflash.mjs` | Reads bindings from `zephyr.dts`, checks for firmware drift, compares with the keyboard, applies the changes and saves them. |
+| `studio-rpc.mjs` | ZMK Studio RPC client over USB serial. |
 
 Why the built site and not the upstream source: the published source (`main`, last touched 2023)
 is an older editor that only edits layer bindings and regenerates the whole `.keymap` from a

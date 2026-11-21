@@ -44,6 +44,11 @@ regenerate with `node editor/vendor.mjs`. Upstream's published `main` source is 
 regenerates the whole keymap from a template, which would drop the combos and hold-taps. The editor
 reads and writes `config/*.keymap` only through `editor/fs-shim.js` and the server, never through
 the browser's file picker. Its saves re-align binding columns, so expect whitespace churn in diffs.
+Its **Soft flash** button sends key bindings to the running left half over ZMK Studio RPC (USB
+serial, Studio app closed) and saves them on the keyboard, with no reflash. It covers bindings
+only. Combos, macros, behavior settings, layers and `.conf` still need a real flash, and soft flash
+refuses when those differ from `firmware/.flashed/` (written by `zmk-build.sh flash`). Tests:
+`node --test editor/test/`.
 
 CI remains the artifact-of-record path:
 

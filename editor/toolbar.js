@@ -55,6 +55,9 @@
   label { color: var(--muted); display: flex; gap: 4px; align-items: center; }
   .go { padding: 7px 16px; border-radius: 6px; border: 0; background: var(--accent); color: #fff; font-weight: 600; }
   .go:disabled { opacity: .5; cursor: default; }
+  .go.soft { background: var(--ok); }
+  .force { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--warn); background: none; color: var(--warn); }
+  label select { flex: 0 0 auto; padding: 4px 6px; }
   .status { font-weight: 600; margin-bottom: 6px; }
   .status.ok { color: var(--ok); } .status.bad { color: var(--bad); } .status.running { color: var(--accent); }
   pre { margin: 0; height: 240px; overflow: auto; background: var(--code-bg); border: 1px solid var(--line);
@@ -74,11 +77,20 @@
       <label title="Clean rebuild - needed after editing .conf, shield files or west.yml">
         <input type="checkbox" class="pristine"> pristine
       </label>
-      <label title="Start a build of the selected target every time the editor saves the keymap">
-        <input type="checkbox" class="autobuild"> build on save
-      </label>
       <button class="go">Build</button>
     </div>
+    <div class="row">
+      <button class="go soft" title="Build the left half, then push its key bindings to the keyboard over USB (ZMK Studio RPC) - no reflash">Soft flash</button>
+      <label title="What to do every time the editor saves the keymap">on save
+        <select class="onsave">
+          <option value="">do nothing</option>
+          <option value="build">build</option>
+          <option value="softflash">soft flash</option>
+        </select>
+      </label>
+      <button class="force" hidden title="Push key bindings even though combos/macros/behaviors/.conf changed - those parts still need a real flash">Apply bindings anyway</button>
+    </div>
+    <p class="meta softinfo"></p>
     <div class="saved meta"></div>
     <div class="status"></div>
     <pre class="log" aria-live="polite"></pre>
@@ -91,26 +103,25 @@
   const panel = $('.panel'); const fab = $('.fab'); const dot = $('.dot'); const fabLabel = $('.fab-label')
   const targetSel = $('.target'); const pristine = $('.pristine'); const go = $('.go')
   const statusEl = $('.status'); const logEl = $('.log'); const fwEl = $('.fw'); const keymapEl = $('.keymap')
-  const autobuild = $('.autobuild'); const savedEl = $('.saved')
-  const LS_AUTO = 'local-build:autobuild'
+  const onsave = $('.onsave'); const savedEl = $('.saved'); const soft = $('.soft')
+  const forceBtn = $('.force'); const softinfo = $('.softinfo')
+  const LS_ONSAVE = 'local-build:onsave'
 
   let state = null // last /status
-  let current = null // build summary
+  let current = null // job summary
 
-  autobuild.checked = store.get(LS_AUTO) === '1'
-  autobuild.addEventListener('change', () => store.set(LS_AUTO, autobuild.checked ? '1' : '0'))
+  onsave.value = store.get(LS_ONSAVE) || ''
+  onsave.addEventListener('change', () => store.set(LS_ONSAVE, onsave.value))
 
   // Raised by fs-shim.js when the editor's Save reaches (or fails to reach) the disk.
   window.addEventListener('local-keymap-saved', e => {
     savedEl.className = 'saved meta'
     savedEl.textContent = `Saved config/${e.detail.name} at ${new Date(e.detail.mtime).toLocaleTimeString()}`
-    if (autobuild.checked) {
-      setOpen(true)
-      if (current && current.running) savedEl.textContent += ' - a build is already running; build again when it finishes'
-      else startBuild()
-    } else {
-      refresh()
-    }
+    if (!onsave.value) return refresh()
+    setOpen(true)
+    if (current && current.running) savedEl.textContent += ' - a job is already running; run it again when it finishes'
+    else if (onsave.value === 'softflash') startSoftFlash(false)
+    else startBuild()
   })
   window.addEventListener('local-keymap-save-failed', e => {
     setOpen(true)
@@ -143,25 +154,45 @@
 
   function render () {
     const running = current && current.running
+    const isSoft = current && current.kind === 'softflash'
     go.disabled = Boolean(running) || !state || !state.targets.length
+    soft.disabled = Boolean(running) || !state || !state.softflash || !state.softflash.target
     dot.className = 'dot ' + (running ? 'running' : current ? (current.exitCode === 0 ? 'ok' : 'bad') : '')
-    fabLabel.textContent = running ? `Building ${dur(current.startedAt)}` : 'Build'
+    fabLabel.textContent = running ? `${isSoft ? 'Soft flashing' : 'Building'} ${dur(current.startedAt)}` : 'Build'
+
+    // Offer the override only when the last soft flash was blocked by firmware-level drift.
+    const blocked = current && !running && isSoft && current.exitCode !== 0 &&
+      /firmware-level changes/.test(logEl.textContent)
+    forceBtn.hidden = !blocked
 
     if (!current) {
       statusEl.className = 'status'
-      statusEl.textContent = 'No build yet this session.'
+      statusEl.textContent = 'Nothing run yet this session.'
     } else if (running) {
       statusEl.className = 'status running'
-      statusEl.textContent = `Building ${current.target}${current.pristine ? ' (pristine)' : ''} - ${dur(current.startedAt)}`
+      statusEl.textContent = isSoft
+        ? `Soft flashing (build ${current.target}, then push bindings) - ${dur(current.startedAt)}`
+        : `Building ${current.target}${current.pristine ? ' (pristine)' : ''} - ${dur(current.startedAt)}`
     } else if (current.exitCode === 0) {
       statusEl.className = 'status ok'
-      statusEl.textContent = `Built ${current.target} in ${dur(current.startedAt, current.finishedAt)} - ${ago(current.finishedAt)}`
+      statusEl.textContent = isSoft
+        ? `Soft flash done in ${dur(current.startedAt, current.finishedAt)} - ${ago(current.finishedAt)}`
+        : `Built ${current.target} in ${dur(current.startedAt, current.finishedAt)} - ${ago(current.finishedAt)}`
     } else {
       statusEl.className = 'status bad'
-      statusEl.textContent = `Build of ${current.target} failed (exit ${current.exitCode}) - see log`
+      statusEl.textContent = isSoft
+        ? 'Soft flash failed - see log'
+        : `Build of ${current.target} failed (exit ${current.exitCode}) - see log`
     }
 
     if (!state) return
+    const sf = state.softflash || {}
+    softinfo.textContent = !sf.target
+      ? 'Soft flash unavailable: no build target has the studio-rpc-usb-uart snippet.'
+      : `Soft flash = build ${sf.target} + push key bindings over USB, saved on the keyboard. ` +
+        (sf.ports && sf.ports.length ? `Keyboard port: ${sf.ports.join(', ')}. ` : 'No USB keyboard detected - plug in the left half. ') +
+        'Quit the ZMK Studio app first (it holds the port). Combos, macros, behavior settings and .conf still need a real flash' +
+        (sf.flashedAt ? ` (last real flash ${ago(sf.flashedAt)}).` : '; no real flash recorded yet, so those changes cannot be detected.')
     const km = state.keymap
     const target = targetSel.value
     const fw = state.firmware.find(f => target !== 'all' && f.name.startsWith(target))
@@ -229,6 +260,28 @@
     render()
   }
   go.addEventListener('click', startBuild)
+
+  async function startSoftFlash (force) {
+    if (soft.disabled && !force) return
+    soft.disabled = true
+    forceBtn.hidden = true
+    logEl.textContent = ''
+    try {
+      const res = await fetch(`${API}/softflash`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: Boolean(force) })
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || res.statusText)
+      current = body
+    } catch (e) {
+      appendLog(`! ${e.message}`)
+    }
+    render()
+  }
+  soft.addEventListener('click', () => startSoftFlash(false))
+  forceBtn.addEventListener('click', () => startSoftFlash(true))
   window.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
       e.preventDefault()
