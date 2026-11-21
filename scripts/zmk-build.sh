@@ -165,6 +165,10 @@ cmd_build() {
     [ -f "$src" ] || die "$id: no zmk.uf2 or zmk.bin produced"
     ext="${src##*.}"
     cp "$src" "$OUT/${id}-zmk.${ext}"
+    # Snapshot what this firmware was built from; `flash` promotes it to .flashed/, which
+    # the editor's soft flash diffs against to spot changes only a real flash can apply.
+    mkdir -p "$OUT/.meta/$id"
+    cp "$WS/build/$id/zephyr/zephyr.dts" "$WS/build/$id/zephyr/.config" "$OUT/.meta/$id/"
     built+=("${id}-zmk.${ext}")
   done
 
@@ -225,6 +229,13 @@ cmd_flash() {
     [ -d "$mnt" ] && die "copy to $mnt failed"
   fi
   sync
+  local tid
+  tid=$(basename "$uf2" -zmk.uf2)
+  if [ -d "$OUT/.meta/$tid" ]; then
+    rm -rf "$OUT/.flashed/$tid"
+    mkdir -p "$OUT/.flashed"
+    cp -R "$OUT/.meta/$tid" "$OUT/.flashed/$tid"
+  fi
   log "flashed - the board reboots on its own and the drive disappears"
 }
 

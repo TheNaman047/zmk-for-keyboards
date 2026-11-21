@@ -1,0 +1,10 @@
+{
+  "upstream": "https://github.com/nickcoutsos/keymap-editor.git",
+  "branch": "pages",
+  "sha": "62ec4d9b529bf377aa711128825b84f354292eed",
+  "files": 316,
+  "patches": [
+    "index.html: github.io URLs made relative",
+    "main.d2ecb2977aa7cf7405e9.js: GitHub source disabled"
+  ]
+}
