@@ -25,6 +25,17 @@ API.
 - **build on save**: starts a build every time the editor saves.
 - The log streams live and survives a page reload. A failed build opens the panel.
 
+## ZMK Studio edits override flashed keymaps
+
+Studio saves its key changes in the keyboard's settings storage, and flashing a `.uf2` does not
+erase that storage. On boot, every key you changed in Studio and saved keeps its Studio binding.
+So a key edited in Studio, then edited here, built and flashed, looks like the flash did nothing.
+
+To hand control back to the `.keymap` file, connect with ZMK Studio and use **Restore Stock
+Settings**. In ZMK v0.2 it resets only the keymap subsystem (`zmk_keymap_reset_settings`), so BLE
+pairings are kept. The heavier fallback is the `settings_reset` firmware target, which also wipes
+pairings.
+
 ## How it works
 
 | File | Role |
