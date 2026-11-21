@@ -34,7 +34,11 @@ There's no bootloader and no drag-and-drop. Only keys that differ are sent.
 1. Plug the **left** half in over USB. It's the half with Studio enabled.
 2. **Quit the ZMK Studio app.** It holds the serial port open, and soft flash will name the
    process blocking it.
-3. Save in the editor, then click **Soft flash**, or set **on save** to soft flash.
+3. Save in the editor. Click **Preview** first: it's read-only and lists every key that differs
+   between the keyboard and the build. **Soft flash overwrites any of those differences, including
+   edits you saved in ZMK Studio but never copied into `corne.keymap`.** Copy any Studio edits you
+   want to keep into the editor before you soft flash.
+4. Click **Soft flash**, or set **on save** to soft flash once you're in the edit-and-try loop.
 
 What it can and can't change:
 
@@ -77,8 +81,11 @@ Studio saves its key changes in the keyboard's settings storage, and flashing a 
 erase that storage. On boot, every key you changed in Studio and saved keeps its Studio binding.
 So a key edited in Studio, then edited here, built and flashed, looks like the flash did nothing.
 
-To hand control back to the `.keymap` file, connect with ZMK Studio and use **Restore Stock
-Settings**. In ZMK v0.2 it resets only the keymap subsystem (`zmk_keymap_reset_settings`), so BLE
+To hand control back to the `.keymap` file, either run **Soft flash** once (it rewrites every
+differing key to the build's binding) or connect with ZMK Studio and use **Restore Stock
+Settings**, then unplug and replug the keyboard. ZMK's reset deletes the saved bindings but doesn't
+reload the running keymap until the keyboard restarts; this reading of the source is untested on
+the device. In ZMK v0.2 it resets only the keymap subsystem (`zmk_keymap_reset_settings`), so BLE
 pairings are kept. The heavier fallback is the `settings_reset` firmware target, which also wipes
 pairings.
 

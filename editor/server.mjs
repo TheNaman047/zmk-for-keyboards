@@ -108,9 +108,9 @@ async function ensureDocker (log) {
 
 // One job at a time: a build, or a build followed by a soft flash. Both share the log.
 // kind: 'build' | 'softflash'
-function startJob ({ kind, target, pristine = false, force = false }) {
+function startJob ({ kind, target, pristine = false, force = false, dryRun = false }) {
   const id = ++buildSeq
-  build = { id, kind, target, pristine, startedAt: Date.now(), finishedAt: null, exitCode: null, lines: [] }
+  build = { id, kind, target, pristine, dryRun, startedAt: Date.now(), finishedAt: null, exitCode: null, lines: [] }
   emit('start', summary())
   const finish = code => {
     build.exitCode = code
@@ -147,12 +147,15 @@ function startJob ({ kind, target, pristine = false, force = false }) {
     if (!(await ensureDocker(log))) return finish(1)
     const code = await runBuild()
     if (code !== 0 || kind !== 'softflash') return finish(code)
-    log('==> soft flash: pushing key bindings to the keyboard over ZMK Studio RPC')
+    log(dryRun
+      ? '==> soft flash preview: comparing the build with the keyboard (read-only)'
+      : '==> soft flash: pushing key bindings to the keyboard over ZMK Studio RPC')
     try {
       await softFlash({
         buildDir: path.join(WORKSPACE, 'build', target),
         baselineDir: path.join(FIRMWARE, '.flashed', target),
         force,
+        dryRun,
         log: line => log(line)
       })
       finish(0)
@@ -347,7 +350,7 @@ async function handle (req, res) {
     let target
     try { target = await studioTarget() } catch (e) { return send(res, 500, { error: e.message }) }
     if (!target) return send(res, 400, { error: 'no build target has the studio-rpc-usb-uart snippet' })
-    startJob({ kind: 'softflash', target, force: Boolean(body.force) })
+    startJob({ kind: 'softflash', target, force: Boolean(body.force), dryRun: Boolean(body.dryRun) })
     return send(res, 202, summary())
   }
 

@@ -56,6 +56,8 @@
   .go { padding: 7px 16px; border-radius: 6px; border: 0; background: var(--accent); color: #fff; font-weight: 600; }
   .go:disabled { opacity: .5; cursor: default; }
   .go.soft { background: var(--ok); }
+  .preview { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: none; color: var(--fg); }
+  .preview:disabled { opacity: .5; cursor: default; }
   .force { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--warn); background: none; color: var(--warn); }
   label select { flex: 0 0 auto; padding: 4px 6px; }
   .status { font-weight: 600; margin-bottom: 6px; }
@@ -80,6 +82,7 @@
       <button class="go">Build</button>
     </div>
     <div class="row">
+      <button class="preview" title="Read-only: list which keys on the keyboard differ from the build. Run this first if you have edits saved from ZMK Studio - soft flash overwrites them.">Preview</button>
       <button class="go soft" title="Build the left half, then push its key bindings to the keyboard over USB (ZMK Studio RPC) - no reflash">Soft flash</button>
       <label title="What to do every time the editor saves the keymap">on save
         <select class="onsave">
@@ -104,7 +107,7 @@
   const targetSel = $('.target'); const pristine = $('.pristine'); const go = $('.go')
   const statusEl = $('.status'); const logEl = $('.log'); const fwEl = $('.fw'); const keymapEl = $('.keymap')
   const onsave = $('.onsave'); const savedEl = $('.saved'); const soft = $('.soft')
-  const forceBtn = $('.force'); const softinfo = $('.softinfo')
+  const forceBtn = $('.force'); const softinfo = $('.softinfo'); const preview = $('.preview')
   const LS_ONSAVE = 'local-build:onsave'
 
   let state = null // last /status
@@ -157,6 +160,7 @@
     const isSoft = current && current.kind === 'softflash'
     go.disabled = Boolean(running) || !state || !state.targets.length
     soft.disabled = Boolean(running) || !state || !state.softflash || !state.softflash.target
+    preview.disabled = soft.disabled
     dot.className = 'dot ' + (running ? 'running' : current ? (current.exitCode === 0 ? 'ok' : 'bad') : '')
     fabLabel.textContent = running ? `${isSoft ? 'Soft flashing' : 'Building'} ${dur(current.startedAt)}` : 'Build'
 
@@ -176,7 +180,8 @@
     } else if (current.exitCode === 0) {
       statusEl.className = 'status ok'
       statusEl.textContent = isSoft
-        ? `Soft flash done in ${dur(current.startedAt, current.finishedAt)} - ${ago(current.finishedAt)}`
+        ? `${current.dryRun ? 'Preview' : 'Soft flash'} done in ${dur(current.startedAt, current.finishedAt)} - ${ago(current.finishedAt)}` +
+          (current.dryRun ? ' (nothing written - see log for differing keys)' : '')
         : `Built ${current.target} in ${dur(current.startedAt, current.finishedAt)} - ${ago(current.finishedAt)}`
     } else {
       statusEl.className = 'status bad'
@@ -261,16 +266,17 @@
   }
   go.addEventListener('click', startBuild)
 
-  async function startSoftFlash (force) {
+  async function startSoftFlash (force, dryRun = false) {
     if (soft.disabled && !force) return
     soft.disabled = true
+    preview.disabled = true
     forceBtn.hidden = true
     logEl.textContent = ''
     try {
       const res = await fetch(`${API}/softflash`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: Boolean(force) })
+        body: JSON.stringify({ force: Boolean(force), dryRun })
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || res.statusText)
@@ -281,6 +287,7 @@
     render()
   }
   soft.addEventListener('click', () => startSoftFlash(false))
+  preview.addEventListener('click', () => startSoftFlash(false, true))
   forceBtn.addEventListener('click', () => startSoftFlash(true))
   window.addEventListener('keydown', e => {
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'b') {
